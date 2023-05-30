@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="32"
+   width="32"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="successbox.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs12" />
+  <sodipodi:namedview
+     id="namedview10"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="25.90625"
+     inkscape:cx="15.054282"
+     inkscape:cy="16.0193"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
+  <path
+     d="m16 3a13 13 0 0 0 -13 13 13 13 0 0 0 13 13 13 13 0 0 0 13-13 13 13 0 0 0 -13-13zm0 1a12 12 0 0 1 12 12 12 12 0 0 1 -12 12 12 12 0 0 1 -12-12 12 12 0 0 1 12-12z"
+     fill="#309048"
+     id="path2" />
+  <path
+     d="m16 4a12 12 0 0 0 -12 12 12 12 0 0 0 12 12 12 12 0 0 0 12-12 12 12 0 0 0 -12-12zm8.066406 5.9980469c.79164.0362701 1.207831.9553191.712891 1.5742191l-10.585938 12.574218c-.339982.436962-.976207.501029-1.396484.140625l-5.1542969-4.828125c-.9934324-.840227.2790677-2.325466 1.2617188-1.472656l4.3828121 4.166016 9.960938-11.769532c.192619-.255394.498805-.3993511.818359-.3847651z"
+     fill="#a1ddaa"
+     id="path4"
+     style="fill:#56c266;fill-opacity:1" />
+  <path
+     d="m24.066648 9.9977632c-.319554-.014586-.625741.1293728-.81836.3847668l-9.960506 11.770366-4.3827784-4.167075c-.9826511-.85281-2.2551508.632429-1.2617184 1.472656l5.1542628 4.829185c.420277.360404 1.056502.296337 1.396484-.140625l10.585506-12.575055c.49494-.6189.07875-1.537949-.71289-1.5742188z"
+     fill="#fafafa"
+     fill-rule="evenodd"
+     id="path6" />
+</svg>
