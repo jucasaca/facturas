@@ -43,7 +43,8 @@ def abrirInformeGenerico(event=None):
 	nombre = event.Source.Model.Tag
 	bas = CreateScriptService('Basic')
 	doc = bas.ThisDatabaseDocument
-	doc.ReportDocuments.getByName(nombre).open()
+	repo = doc.ReportDocuments.getByName(nombre)
+	# doc.ReportDocuments.getByName(nombre).open()
 	return
 
 
@@ -62,17 +63,23 @@ def mostrarBase(event=None):
 	DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow, hidden=False)
 	return
 
-
+# ----------------------------------------------------------------------
+# Rutinas a ejecutar cuando se abre un formulario
 def abrirFormulario(event=None):
-	# ocultarMenuBarras(event)
-	pass
+	ocultarMenuBarras(event)
+	return
 
+# ----------------------------------------------------------------------
+# Rutinas a ejecutar cuando se cierra un formulario
 def cerrarFormulario(event=None):
 	mostrarMenuBarras(event)
 	# TODO ver si se puede evitar llamar siempre a limpiarFiltros
 	limpiarFiltros(event)
+	return
 
 
+# ----------------------------------------------------------------------
+# Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def limpiarFiltros(event=None):
 	# Primero vacía el contenido de todos los campos de la tabal auxiliar filtros
 	rs = Application.CurrentDb().OpenRecordset("Filtros")
@@ -110,6 +117,7 @@ def mostrarMenuBarras(event=None):
 
 
 # ----------------------------------------------------------------------
+# Rutinas a ejecutar cuando se cierra el programa
 def salir(event=None):
 	bas = CreateScriptService('Basic')
 	doc = CreateScriptService("SFDocuments.Document", bas.ThisDatabaseDocument)
@@ -122,8 +130,8 @@ def tamanio(event=None):
 	titulo = event.Source.Title.split(':')
 	tit = titulo[1].strip()
 	if tit == 'Facturas':
-		w = 885
-		h = 720
+		w = 960
+		h = 730
 	elif tit == 'Clientes':
 		w = 665
 		h = 530
@@ -139,9 +147,15 @@ def tamanio(event=None):
 	elif tit == 'SeriesFactura':
 		w = 638
 		h = 450
-	elif tit == 'Asistencias' or tit == 'Asistencias1':
+	elif tit == 'Asistencias':
 		w = 970
 		h = 750
+	elif tit == 'Colaboradores':
+		w = 665
+		h = 560
+	elif tit == 'FacturasColaborador':
+		w = 960
+		h = 730
 	else:
 		w = -1
 		h = -1
@@ -158,11 +172,13 @@ def main(event=None):
 	return
 
 
-def facturaDesdeAsistencia(event=None):
+# ----------------------------------------------------------------------
+# Crea un registro de facturas y sus detalles con los datos de la asistencia
+def facturaAsistencia(event=None):
 	form = event.Source.Model.Parent
 	if not form.getInt(form.findColumn("AsIdFactura")):
 		id = form.getString(form.findColumn("AsId"))
-		sSQL = "SELECT * FROM  P_FACTURA_DESDE_ASITENCIA(" + id + ")"
+		sSQL = "SELECT * FROM  P_FACTURA_ASISTENCIA(" + id + ")"
 		con = form.ActiveConnection
 		stat = con.prepareStatement(sSQL)
 		result = stat.executeQuery()
@@ -175,47 +191,141 @@ def facturaDesdeAsistencia(event=None):
 	# mensaje(fact)
 	return
 
-def pruebas(event=None):
-	bas = CreateScriptService("Basic")
+
+# ----------------------------------------------------------------------
+# Crea un registro de factura de colaborador con sus detalles
+def facturaColaborador(event=None):
 	form = event.Source.Model.Parent
-
-	# campo = form.Columns.getByName("AsId").getString()
-	id = form.getString(form.findColumn("AsId"))
-	# campo = form.getString(1)
-
-	sSQL = "SELECT * FROM  P_FACTURA_DESDE_ASITENCIA(" + id + ")"
-	mensaje(sSQL)
-
-	con = form.ActiveConnection
-	stat = con.prepareStatement(sSQL)
-	result = stat.executeQuery()
-	result.next()
-	mensaje(result.getString(1))
-
-	sSQL = """SELECT * FROM "DetallesAsistencia" WHERE 	"DaIdAsistencia" = """ + campo
-
-	con = form.ActiveConnection
-	stat = con.prepareStatement()
-
-	ret = stat.executeQuery(sSQL)
-	# mensaje(ret)
-	rs = stat.executeQuery(sSQL)
-	rs.first()
-	while not rs.isAfterLast():
-		mensaje(rs.getString(rs.findColumn("DaDescripcion")))
-		rs.next()
-		# sSQL = """ INSERT INTO """
+	if not form.getInt(form.findColumn("AsIdFactColaborador")):
+		id = form.getString(form.findColumn("AsId"))
+		sSQL = "SELECT * FROM  P_FACT_COLABORADOR(" + id + ")"
+		con = form.ActiveConnection
+		stat = con.prepareStatement(sSQL)
+		result = stat.executeQuery()
+		result.next() # al moverse al siguiente registro guarda los cambios efectuados
+		registro_actual = form.getBookmark()
+		form.reload()
+		form.moveToBookmark(registro_actual)
+	else:
+		mensaje("""No se puede hacer factura de colaborador.\n\
+La asistencia ya está facturada a un colaborador.""", 48, "Error de facturación")
+	# mensaje(fact)
 	return
+
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no cobradas en el formulario facturas
+def filtroNoCobradas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoFacturadas").State:
+			form.getByName("btnNoFacturadas").State = 0
+		form.Filter = "FaFechaCobro IS NULL"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
+
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
+def filtroColNoPagadas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoFacturadas").State:
+			form.getByName("btnNoFacturadas").State = 0
+		form.Filter = "FcFechaPago IS NULL"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
+
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no emitidas en el formulario facturas
+def filtroNoFacturadas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoCobradas").State:
+			form.getByName("btnNoCobradas").State = 0
+		form.Filter = "FaNumero IS NULL"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
+
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no emitidas en el formulario facturas
+def filtroColNoFacturadas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoPagadas").State:
+			form.getByName("btnNoPagadas").State = 0
+		form.Filter = "FcNumero IS NULL"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
+
+# ----------------------------------------------------------------------
+# Emite la factura (pone número e imprime)
+def emitirFactura(event=None):
+	form = event.Source.Model.Parent
+	numFactura = form.getString(form.findColumn("FaNumero"))
+	if numFactura:
+		mensaje("La factura número " + numFactura + " ya está facturada",48, "Error al emitir factura")
+	else:
+		registro = form.getString(form.findColumn("FaId"))
+		sSQL = "EXECUTE PROCEDURE P_EMITIR_FACTURA(" + registro + ")"
+		con = form.ActiveConnection
+		stat = con.prepareStatement(sSQL)
+		stat.executeQuery()
+		registro_actual = form.getBookmark()
+		form.reload()
+		form.moveToBookmark(registro_actual)
+	return
+
 
 def obtenerCampo(event, nombreCampo):
 	form = event.Source.Model.Parent
 	campo = form.getString(form.findColumn(nombreCampo))
 	return campo
+
+# ----------------------------------------------------------------------
+# Ventana de mensajes tipo MsgBox
 def mensaje(texto, botones=0, titulo=''):
 	bas = CreateScriptService("Basic")
-	bas.MsgBox(texto, botones, titulo)
+	return bas.MsgBox(texto, botones, titulo)
 
 
+# ----------------------------------------------------------------------
+# Ventana de mensajes tipo MsgBox
 def xray(objeto):
 	bas = CreateScriptService("Basic")
 	bas.Xray(objeto)
+
+
+def pruebas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	# xray(boton)
+	if boton.State:
+		form.Filter = "FaFechaCobro IS NULL"
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
