@@ -104,7 +104,7 @@ def ocultarMenuBarras(event=None):
 	frame = doc.CurrentController.Frame
 	#  TODO Cambiar la visibilidad para editar el formulario
 	frame.LayoutManager.setVisible(False)
-	tamanio(event)
+	definir_tamanio(event)
 
 
 # ----------------------------------------------------------------------
@@ -126,10 +126,11 @@ def salir(event=None):
 
 # ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
-def tamanio(event=None):
+def definir_tamanio(event=None):
 	titulo = event.Source.Title.split(':')
 	tit = titulo[1].strip()
 	if tit == 'Facturas':
+
 		w = 960
 		h = 730
 	elif tit == 'Clientes':
@@ -171,18 +172,25 @@ def main(event=None):
 	titulo = titulo.split(':')
 	return
 
+# ----------------------------------------------------------------------
+# Crea un registro de facturas y otro de factura de colaborador con
+# sus detalles respectivos desde los datos de la asistencia
+def facturarTodo(event=None):
+	facturarAsistencia(event)
+	facturarColaborador(event)
+	return
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas y sus detalles con los datos de la asistencia
-def facturaAsistencia(event=None):
+def facturarAsistencia(event=None):
 	form = event.Source.Model.Parent
 	if not form.getInt(form.findColumn("AsIdFactura")):
 		id = form.getString(form.findColumn("AsId"))
-		sSQL = "SELECT * FROM  P_FACTURA_ASISTENCIA(" + id + ")"
+		sSQL = "EXECUTE PROCEDURE P_FACTURA_ASISTENCIA(" + id + ")"
 		con = form.ActiveConnection
 		stat = con.prepareStatement(sSQL)
 		result = stat.executeQuery()
-		result.next() # al moverse al siguiente registro guarda los cambios efectuados
+		# result.next() # al moverse al siguiente registro guarda los cambios efectuados
 		registro_actual = form.getBookmark()
 		form.reload()
 		form.moveToBookmark(registro_actual)
@@ -194,15 +202,15 @@ def facturaAsistencia(event=None):
 
 # ----------------------------------------------------------------------
 # Crea un registro de factura de colaborador con sus detalles
-def facturaColaborador(event=None):
+def facturarColaborador(event=None):
 	form = event.Source.Model.Parent
 	if not form.getInt(form.findColumn("AsIdFactColaborador")):
 		id = form.getString(form.findColumn("AsId"))
-		sSQL = "SELECT * FROM  P_FACT_COLABORADOR(" + id + ")"
+		sSQL = "EXECUTE PROCEDURE P_FACT_COLABORADOR(" + id + ")"
 		con = form.ActiveConnection
 		stat = con.prepareStatement(sSQL)
-		result = stat.executeQuery()
-		result.next() # al moverse al siguiente registro guarda los cambios efectuados
+		stat.executeQuery()
+		# result.next() # al moverse al siguiente registro guarda los cambios efectuados
 		registro_actual = form.getBookmark()
 		form.reload()
 		form.moveToBookmark(registro_actual)
@@ -215,7 +223,7 @@ La asistencia ya está facturada a un colaborador.""", 48, "Error de facturació
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no cobradas en el formulario facturas
-def filtroNoCobradas(event=None):
+def filtrarNoCobradas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
@@ -232,7 +240,7 @@ def filtroNoCobradas(event=None):
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
-def filtroColNoPagadas(event=None):
+def filtrarColabNoPagadas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
@@ -249,7 +257,7 @@ def filtroColNoPagadas(event=None):
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no emitidas en el formulario facturas
-def filtroNoFacturadas(event=None):
+def filtrarNoFacturadas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
@@ -266,7 +274,7 @@ def filtroNoFacturadas(event=None):
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no emitidas en el formulario facturas
-def filtroColNoFacturadas(event=None):
+def filtrarColabNoFacturadas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
