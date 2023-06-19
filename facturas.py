@@ -336,4 +336,5 @@ def pruebas(event=None):
 	else:
 		form.Filter = ""
 		form.reload()
+		# esto no hace nada
 	return
