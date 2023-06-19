@@ -1,38 +1,26 @@
 import string
 from com.sun.star.document import DocumentEvent
+from com.sun.star.beans import PropertyValue
 from scriptforge import CreateScriptService
 from access2base import DoCmd, Application, acConstants
 import uno
 
-
+dirFacturas = "C:/Users/juanc/Downloads/facturas/"
 # ----------------------------------------------------------------------
-# Muestra el formulario principal y oculta Base
-def abrirMenuPpal(event=None):
-	Application.OpenConnection()
-	# # TODO: Ocultar Base
-	bas = CreateScriptService('Basic')
-	doc = CreateScriptService('Document',bas.ThisDatabaseDocument)
-	doc.OpenFormDocument('MenuPpal')
-	return
-
-
-# ----------------------------------------------------------------------
-# Cierra el formulario principal y muestra Base
-def cerrarMenuPpal(event=None):
-	# TODO Mostar base al cerrar la aplicación
-	mostrarMenuBarras(event)  # Muestra el menú y la barras nuevamente
-	salir(event)
-	return
-
-
-# ----------------------------------------------------------------------
-# Abre un formulario. El nombre del formulario debe estar en el Tag del 
+# Abre un formulario. El nombre del formulario debe estar en el Tag del
 # control que lo llama
 def abrirFormGenerico(event=None):
 	bas = CreateScriptService('Basic')
 	doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
 	nombre = event.Source.Model.Tag
 	doc.OpenFormDocument(nombre)
+	return
+
+
+# ----------------------------------------------------------------------
+# Rutinas a ejecutar cuando se abre un formulario
+def abrirFormulario(event=None):
+	ocultarMenuBarras(event)
 	return
 
 
@@ -49,25 +37,15 @@ def abrirInformeGenerico(event=None):
 
 
 # ----------------------------------------------------------------------
-# Oculta Base. Se llama desde un formulario
-def ocultarBase(event=None):
+# Muestra el formulario principal y oculta Base
+def abrirMenuPpal(event=None):
 	Application.OpenConnection()
-	DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow)
+	# # TODO: Ocultar Base
+	bas = CreateScriptService('Basic')
+	doc = CreateScriptService('Document',bas.ThisDatabaseDocument)
+	doc.OpenFormDocument('MenuPpal')
 	return
 
-
-# ----------------------------------------------------------------------
-# Muestra Base.
-def mostrarBase(event=None):
-	Application.OpenConnection()
-	DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow, hidden=False)
-	return
-
-# ----------------------------------------------------------------------
-# Rutinas a ejecutar cuando se abre un formulario
-def abrirFormulario(event=None):
-	ocultarMenuBarras(event)
-	return
 
 # ----------------------------------------------------------------------
 # Rutinas a ejecutar cuando se cierra un formulario
@@ -79,50 +57,12 @@ def cerrarFormulario(event=None):
 
 
 # ----------------------------------------------------------------------
-# Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
-def limpiarFiltros(event=None):
-	# Primero vacía el contenido de todos los campos de la tabal auxiliar filtros
-	rs = Application.CurrentDb().OpenRecordset("Filtros")
-	rs.Edit()
-	for f in rs.Fields():
-		if f.Name != 'FiId':
-			f.Value = ""
-	rs.Update()
-	source = event.Source  # ¿Quién llama a la función?
-	# Si es un botón
-	if source.ImplementationName == 'com.sun.star.form.OButtonControl':
-		# recargamos todos lo formularios para que actualicen los datos y se muestren todos
-		for form in source.Model.Parent.Parent:  # la colección de formularios
-			form.reload()
+# Cierra el formulario principal y muestra Base
+def cerrarMenuPpal(event=None):
+	# TODO Mostar base al cerrar la aplicación
+	mostrarMenuBarras(event)  # Muestra el menú y la barras nuevamente
+	salir(event)
 	return
-
-
-# ----------------------------------------------------------------------
-# Esconde el menu y barras de herramientas de un formulario
-def ocultarMenuBarras(event=None):
-	doc = event.Source
-	frame = doc.CurrentController.Frame
-	#  TODO Cambiar la visibilidad para editar el formulario
-	frame.LayoutManager.setVisible(False)
-	definir_tamanio(event)
-
-
-# ----------------------------------------------------------------------
-# Muestra el menu y barras de herramientas de un formulario que los tiene ocultos
-def mostrarMenuBarras(event=None):
-	doc = event.Source
-	frame = doc.CurrentController.Frame
-	frame.LayoutManager.setVisible(True)
-	pass
-
-
-# ----------------------------------------------------------------------
-# Rutinas a ejecutar cuando se cierra el programa
-def salir(event=None):
-	bas = CreateScriptService('Basic')
-	doc = CreateScriptService("SFDocuments.Document", bas.ThisDatabaseDocument)
-	# TODO Comentar temporalmente la siguiente línea si se necesita trabajar en Base
-	# doc.RunCommand("CloseDoc")
 
 # ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
@@ -130,7 +70,6 @@ def definir_tamanio(event=None):
 	titulo = event.Source.Title.split(':')
 	tit = titulo[1].strip()
 	if tit == 'Facturas':
-
 		w = 960
 		h = 730
 	elif tit == 'Clientes':
@@ -157,6 +96,9 @@ def definir_tamanio(event=None):
 	elif tit == 'FacturasColaborador':
 		w = 960
 		h = 730
+	elif tit == 'Configuracion':
+		w = 740
+		h = 480
 	else:
 		w = -1
 		h = -1
@@ -166,18 +108,21 @@ def definir_tamanio(event=None):
 
 
 # ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
-def main(event=None):
-	titulo = event.Source.Title.split()
-	titulo = titulo.split(':')
-	return
-
-# ----------------------------------------------------------------------
-# Crea un registro de facturas y otro de factura de colaborador con
-# sus detalles respectivos desde los datos de la asistencia
-def facturarTodo(event=None):
-	facturarAsistencia(event)
-	facturarColaborador(event)
+# Emite la factura (pone número e imprime)
+def emitirFactura(event=None):
+	form = event.Source.Model.Parent
+	numFactura = form.getString(form.findColumn("FaNumero"))
+	if numFactura:
+		mensaje("La factura número " + numFactura + " ya está facturada",48, "Error al emitir factura")
+	else:
+		registro = form.getString(form.findColumn("FaId"))
+		sSQL = "EXECUTE PROCEDURE P_EMITIR_FACTURA(" + registro + ")"
+		con = form.ActiveConnection
+		stat = con.prepareStatement(sSQL)
+		stat.executeQuery()
+		registro_actual = form.getBookmark()
+		form.reload()
+		form.moveToBookmark(registro_actual)
 	return
 
 # ----------------------------------------------------------------------
@@ -222,14 +167,39 @@ La asistencia ya está facturada a un colaborador.""", 48, "Error de facturació
 
 
 # ----------------------------------------------------------------------
-# Establece un filtro de facturas no cobradas en el formulario facturas
-def filtrarNoCobradas(event=None):
+# Crea un registro de facturas y otro de factura de colaborador con
+# sus detalles respectivos desde los datos de la asistencia
+def facturarTodo(event=None):
+	facturarAsistencia(event)
+	facturarColaborador(event)
+	return
+
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no emitidas en el formulario facturas
+def filtrarAsistencias(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
-		if form.getByName("btnNoFacturadas").State:
-			form.getByName("btnNoFacturadas").State = 0
-		form.Filter = "FaFechaCobro IS NULL"
+		boton.HelpText = "Mostrar todas las asistencias"
+		form.Filter = """"AsIdFactura" IS NULL OR "AsIdFactColaborador" IS  NULL"""
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		boton.HelpText = "Mostrar solo asistencias no facturadas"
+		form.Filter = ""
+		form.reload()
+	return
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no emitidas en el formulario facturas
+def filtrarColabNoFacturadas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoPagadas").State:
+			form.getByName("btnNoPagadas").State = 0
+		form.Filter = "FcNumero IS NULL"
 		form.ApplyFilter = True
 		form.reload()
 	else:
@@ -256,6 +226,23 @@ def filtrarColabNoPagadas(event=None):
 
 
 # ----------------------------------------------------------------------
+# Establece un filtro de facturas no cobradas en el formulario facturas
+def filtrarNoCobradas(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		if form.getByName("btnNoFacturadas").State:
+			form.getByName("btnNoFacturadas").State = 0
+		form.Filter = "FaFechaCobro IS NULL"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		form.Filter = ""
+		form.reload()
+	return
+
+
+# ----------------------------------------------------------------------
 # Establece un filtro de facturas no emitidas en el formulario facturas
 def filtrarNoFacturadas(event=None):
 	boton = event.Source.Model
@@ -273,50 +260,108 @@ def filtrarNoFacturadas(event=None):
 
 
 # ----------------------------------------------------------------------
-# Establece un filtro de facturas no emitidas en el formulario facturas
-def filtrarColabNoFacturadas(event=None):
-	boton = event.Source.Model
+# Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
+def imprimirFactura(event=None):
+	bas = CreateScriptService('Basic')
+
 	form = event.Source.Model.Parent
-	if boton.State:
-		if form.getByName("btnNoPagadas").State:
-			form.getByName("btnNoPagadas").State = 0
-		form.Filter = "FcNumero IS NULL"
-		form.ApplyFilter = True
-		form.reload()
-	else:
-		form.Filter = ""
-		form.reload()
+	id = form.getString(form.findColumn("FaId"))
+	numFactura = "Fact " + form.getString(form.findColumn("FaNumero"))
+	if not numFactura:
+		mensaje("No se puede crear el PDF porque la factura no está emitida", 49, "Error al crear PDF")
+		return
+	# Filtrar por el Id de factura
+	sql = 'UPDATE "Filtros" SET "Filtro1" = ' + id + ' WHERE "FiId" = 1'
+	ds = bas.ThisComponent.Parent.CurrentController
+	con = ds.ActiveConnection
+	stat = con.createStatement()
+	stat.executeUpdate(sql)
+
+
+	doc = bas.ThisDatabaseDocument
+	informe = doc.ReportDocuments.getByName("ConFacturas").open()
+	# xray(informe)
+	vistaInforme = informe.CurrentController.Frame.ContainerWindow
+	vistaInforme.setVisible(False)
+	archivo = uno.systemPathToFileUrl(dirFacturas + numFactura)
+	mensaje(archivo)
+	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
+	informe.storeToURL(archivo, args)
+	informe.close(True)
+	limpiarFiltros()
+
 	return
+
 
 # ----------------------------------------------------------------------
-# Emite la factura (pone número e imprime)
-def emitirFactura(event=None):
-	form = event.Source.Model.Parent
-	numFactura = form.getString(form.findColumn("FaNumero"))
-	if numFactura:
-		mensaje("La factura número " + numFactura + " ya está facturada",48, "Error al emitir factura")
-	else:
-		registro = form.getString(form.findColumn("FaId"))
-		sSQL = "EXECUTE PROCEDURE P_EMITIR_FACTURA(" + registro + ")"
-		con = form.ActiveConnection
-		stat = con.prepareStatement(sSQL)
-		stat.executeQuery()
-		registro_actual = form.getBookmark()
-		form.reload()
-		form.moveToBookmark(registro_actual)
+# Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
+def limpiarFiltros(event=None):
+	# Primero vacía el contenido de todos los campos de la tabal auxiliar filtros
+	rs = Application.CurrentDb().OpenRecordset("Filtros")
+	rs.Edit()
+	for f in rs.Fields():
+		if f.Name != 'FiId':
+			f.Value = ""
+	rs.Update()
+	if event:
+		source = event.Source  # ¿Quién llama a la función?
+		# Si es un botón
+		if source.ImplementationName == 'com.sun.star.form.OButtonControl':
+			# recargamos todos lo formularios para que actualicen los datos y se muestren todos
+			for form in source.Model.Parent.Parent:  # la colección de formularios
+				form.reload()
 	return
 
-
-def obtenerCampo(event, nombreCampo):
-	form = event.Source.Model.Parent
-	campo = form.getString(form.findColumn(nombreCampo))
-	return campo
 
 # ----------------------------------------------------------------------
 # Ventana de mensajes tipo MsgBox
 def mensaje(texto, botones=0, titulo=''):
 	bas = CreateScriptService("Basic")
 	return bas.MsgBox(texto, botones, titulo)
+# ----------------------------------------------------------------------
+# Muestra Base.
+
+
+def mostrarBase(event=None):
+	Application.OpenConnection()
+	DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow, hidden=False)
+	return
+
+# ----------------------------------------------------------------------
+# Muestra el menu y barras de herramientas de un formulario que los tiene ocultos
+def mostrarMenuBarras(event=None):
+	doc = event.Source
+	frame = doc.CurrentController.Frame
+	frame.LayoutManager.setVisible(True)
+	pass
+
+
+# ----------------------------------------------------------------------
+# Oculta Base. Se llama desde un formulario
+def ocultarBase(event=None):
+	Application.OpenConnection()
+	DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow)
+	return
+
+
+# ----------------------------------------------------------------------
+# Esconde el menu y barras de herramientas de un formulario
+def ocultarMenuBarras(event=None):
+	doc = event.Source
+	frame = doc.CurrentController.Frame
+	#  TODO Cambiar la visibilidad para editar el formulario
+	frame.LayoutManager.setVisible(False)
+	definir_tamanio(event)
+
+
+# ----------------------------------------------------------------------
+# Rutinas a ejecutar cuando se cierra el programa
+def salir(event=None):
+	bas = CreateScriptService('Basic')
+	doc = CreateScriptService("SFDocuments.Document", bas.ThisDatabaseDocument)
+	# TODO Comentar temporalmente la siguiente línea si se necesita trabajar en Base
+	# doc.RunCommand("CloseDoc")
+	return
 
 
 # ----------------------------------------------------------------------
@@ -326,6 +371,13 @@ def xray(objeto):
 	bas.Xray(objeto)
 
 
+# ----------------------------------------------------------------------
+def main(event=None):
+	titulo = event.Source.Title.split()
+	titulo = titulo.split(':')
+	return
+
+# ----------------------------------------------------------------------
 def pruebas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
