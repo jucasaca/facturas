@@ -5,7 +5,21 @@ from scriptforge import CreateScriptService
 from access2base import DoCmd, Application, acConstants
 import uno
 
-dirFacturas = "C:/Users/juanc/Downloads/facturas/"
+dir_facturas = ''
+dir_fac_colab = ''
+
+
+# ----------------------------------------------------------------------
+# Abre un formulario. El nombre del formulario debe estar en el Tag del
+# control que lo llama
+def abrirFacturas(event=None):
+	Application.OpenConnection()
+	# # TODO: Ocultar Base
+	cargarConfig(event)
+	abrirMenuPpal(event)
+	return
+
+
 # ----------------------------------------------------------------------
 # Abre un formulario. El nombre del formulario debe estar en el Tag del
 # control que lo llama
@@ -39,13 +53,36 @@ def abrirInformeGenerico(event=None):
 # ----------------------------------------------------------------------
 # Muestra el formulario principal y oculta Base
 def abrirMenuPpal(event=None):
-	Application.OpenConnection()
-	# # TODO: Ocultar Base
 	bas = CreateScriptService('Basic')
-	doc = CreateScriptService('Document',bas.ThisDatabaseDocument)
+	doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
 	doc.OpenFormDocument('MenuPpal')
 	return
 
+
+
+# ----------------------------------------------------------------------
+# Cargar la configuración de la tabla configuración en variables locales
+def cargarConfig(event=None):
+	bas = CreateScriptService(('Basic'))
+	ds = bas.thisDatabaseDocument.DataSource
+	con = ds.getConnection('','')
+	stat = con.createStatement()
+
+	# Obtener el directorio de facturas
+	sql = """SELECT "CfValor" FROM "Configuracion" WHERE "CfConfiguracion" = 'DirFact'"""
+	rs = stat.executeQuery(sql)
+	rs.first()
+	global dir_facturas
+	dir_facturas = rs.getString(rs.findColumn('CfValor'))
+
+	# Obtener el directorio de facturas de colaborador
+	sql = """SELECT "CfValor" FROM "Configuracion" WHERE "CfConfiguracion" = 'DirFactCol'"""
+	rs = stat.executeQuery(sql)
+	rs.first()
+	global dir_fac_colab
+	dir_fac_colab = rs.getString(rs.findColumn('CfValor'))
+
+	return
 
 # ----------------------------------------------------------------------
 # Rutinas a ejecutar cuando se cierra un formulario
@@ -66,7 +103,7 @@ def cerrarMenuPpal(event=None):
 
 # ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
-def definir_tamanio(event=None):
+def definirTamanio(event=None):
 	titulo = event.Source.Title.split(':')
 	tit = titulo[1].strip()
 	if tit == 'Facturas':
@@ -111,12 +148,12 @@ def definir_tamanio(event=None):
 # Emite la factura (pone número e imprime)
 def emitirFactura(event=None):
 	form = event.Source.Model.Parent
-	numFactura = form.getString(form.findColumn("FaNumero"))
+	numFactura = form.getString(form.findColumn('FaNumero'))
 	if numFactura:
-		mensaje("La factura número " + numFactura + " ya está facturada",48, "Error al emitir factura")
+		mensaje('La factura número ' + numFactura + ' ya está facturada',48, 'Error al emitir factura')
 	else:
 		registro = form.getString(form.findColumn("FaId"))
-		sSQL = "EXECUTE PROCEDURE P_EMITIR_FACTURA(" + registro + ")"
+		sSQL = 'EXECUTE PROCEDURE P_EMITIR_FACTURA(' + registro + ')'
 		con = form.ActiveConnection
 		stat = con.prepareStatement(sSQL)
 		stat.executeQuery()
@@ -134,8 +171,7 @@ def facturarAsistencia(event=None):
 		sSQL = "EXECUTE PROCEDURE P_FACTURA_ASISTENCIA(" + id + ")"
 		con = form.ActiveConnection
 		stat = con.prepareStatement(sSQL)
-		result = stat.executeQuery()
-		# result.next() # al moverse al siguiente registro guarda los cambios efectuados
+		stat.executeQuery()
 		registro_actual = form.getBookmark()
 		form.reload()
 		form.moveToBookmark(registro_actual)
@@ -263,7 +299,6 @@ def filtrarNoFacturadas(event=None):
 # Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def imprimirFactura(event=None):
 	bas = CreateScriptService('Basic')
-
 	form = event.Source.Model.Parent
 	id = form.getString(form.findColumn("FaId"))
 	numFactura = "Fact " + form.getString(form.findColumn("FaNumero"))
@@ -283,8 +318,7 @@ def imprimirFactura(event=None):
 	# xray(informe)
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
-	archivo = uno.systemPathToFileUrl(dirFacturas + numFactura)
-	mensaje(archivo)
+	archivo = uno.systemPathToFileUrl(dir_facturas + numFactura)
 	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
 	informe.storeToURL(archivo, args)
 	informe.close(True)
@@ -297,6 +331,7 @@ def imprimirFactura(event=None):
 # Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def limpiarFiltros(event=None):
 	# Primero vacía el contenido de todos los campos de la tabal auxiliar filtros
+	# Application.OpenConnection()
 	rs = Application.CurrentDb().OpenRecordset("Filtros")
 	rs.Edit()
 	for f in rs.Fields():
@@ -351,7 +386,7 @@ def ocultarMenuBarras(event=None):
 	frame = doc.CurrentController.Frame
 	#  TODO Cambiar la visibilidad para editar el formulario
 	frame.LayoutManager.setVisible(False)
-	definir_tamanio(event)
+	definirTamanio(event)
 
 
 # ----------------------------------------------------------------------
