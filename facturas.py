@@ -157,10 +157,10 @@ def facturarAsistencia(event=None):
 # Crea un registro de factura de colaborador con sus detalles
 def facturarColaborador(event=None):
 	form = event.Source.Model.Parent
-	if form.getInt(form.findColumn("AsIdFactColaborador")):
-		mensaje("""No se puede hacer factura de colaborador.\n\
-		La asistencia ya está facturada a un colaborador.""", 48, "Error de facturación")
-		return
+	# if form.getInt(form.findColumn("AsIdFactColaborador")):
+	# 	mensaje("""No se puede hacer factura de colaborador.\n\
+	# 	La asistencia ya está facturada a un colaborador.""", 48, "Error de facturación")
+	# 	return
 	id = form.getString(form.findColumn("AsId"))
 	sSQL = "EXECUTE PROCEDURE P_FACT_COLABORADOR(" + id + ")"
 	con = form.ActiveConnection
@@ -188,7 +188,7 @@ def filtrarAsistencias(event=None):
 	form = event.Source.Model.Parent
 	if boton.State:
 		boton.HelpText = "Mostrar todas las asistencias"
-		form.Filter = """"AsIdFactura" IS NULL OR "AsIdFactColaborador" IS  NULL"""
+		form.Filter = """"AsIdFactura" IS NULL"""
 		form.ApplyFilter = True
 		form.reload()
 	else:
