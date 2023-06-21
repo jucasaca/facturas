@@ -114,7 +114,7 @@ def establecerTamanio(event=None):
 		h = 450
 	elif tit == 'Asistencias':
 		w = 970
-		h = 750
+		h = 730
 	elif tit == 'Colaboradores':
 		w = 665
 		h = 560
@@ -133,19 +133,6 @@ def establecerTamanio(event=None):
 
 
 # ----------------------------------------------------------------------
-# Emite la factura (pone número e imprime)
-def emitirFactura(fa_id):
-	bas = CreateScriptService(('Basic'))
-	ds = bas.thisDatabaseDocument.DataSource
-	con = ds.getConnection('', '')
-	stat = con.createStatement()
-	sSQL = 'EXECUTE PROCEDURE P_EMITIR_FACTURA(' + fa_id + ')'
-	stat.executeQuery(sSQL)
-
-	imprimirFactura(fa_id)
-	return
-
-# ----------------------------------------------------------------------
 # Crea un registro de facturas y sus detalles con los datos de la asistencia
 def facturarAsistencia(event=None):
 	form = event.Source.Model.Parent
@@ -162,8 +149,7 @@ def facturarAsistencia(event=None):
 	registro_actual = form.getBookmark()
 	form.reload()
 	form.moveToBookmark(registro_actual)
-
-	emitirFactura(fa_id)
+	imprimirFactura(fa_id)
 	return
 
 
@@ -251,29 +237,12 @@ def filtrarNoCobradas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
-		if form.getByName("btnNoFacturadas").State:
-			form.getByName("btnNoFacturadas").State = 0
+		boton.HelpText = "Mostrar todas las facturas"
 		form.Filter = "FaFechaCobro IS NULL"
 		form.ApplyFilter = True
 		form.reload()
 	else:
-		form.Filter = ""
-		form.reload()
-	return
-
-
-# ----------------------------------------------------------------------
-# Establece un filtro de facturas no emitidas en el formulario facturas
-def filtrarNoFacturadas(event=None):
-	boton = event.Source.Model
-	form = event.Source.Model.Parent
-	if boton.State:
-		if form.getByName("btnNoCobradas").State:
-			form.getByName("btnNoCobradas").State = 0
-		form.Filter = "FaNumero IS NULL"
-		form.ApplyFilter = True
-		form.reload()
-	else:
+		boton.HelpText = "Mostrar solo no cobradas"
 		form.Filter = ""
 		form.reload()
 	return
@@ -314,6 +283,9 @@ def imprimirFactura(fa_id):
 def imprimirFacturaForm(event=None):
 	# TODO obtener el id de la factura seleccionada e imprimirla
 	mensaje("Hay que ver somo se llama a imprimirFacturad desde aquí", 48, "Error")
+	form = event.Source.Model.Parent
+	id = form.getString(form.findColumn("FaId"))
+	imprimirFactura(id)
 	return
 
 
@@ -420,6 +392,6 @@ def main(event=None):
 
 # ----------------------------------------------------------------------
 def pruebas(event=None):
-	mensaje('Estamos saliendo')
+	mensaje('Este es el mensaje de pruebas')
 
 	return
