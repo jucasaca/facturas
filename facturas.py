@@ -140,32 +140,30 @@ def facturarAsistencia(event=None):
 		mensaje("No se puede facturar la asistencia.\nLa asistencia ya está facturada.", 48, "Error de facturación")
 		return
 	id = form.getString(form.findColumn("AsId"))
-	sSQL = "SELECT FA_ID FROM P_FACTURA_ASISTENCIA(" + id + ")"
+	sql = "SELECT FA_ID FROM P_FACTURA_ASISTENCIA(" + id + ")"
 	con = form.ActiveConnection
 	stat = con.createStatement()
-	rs = stat.executeQuery(sSQL)
+	rs = stat.executeQuery(sql)
 	rs.first()
 	fa_id = rs.getString(rs.findColumn('FA_ID'))
 	registro_actual = form.getBookmark()
 	form.reload()
 	form.moveToBookmark(registro_actual)
 	imprimirFactura(fa_id)
+	facturarColaborador(form, id)
 	return
 
 
 # ----------------------------------------------------------------------
 # Crea un registro de factura de colaborador con sus detalles
-def facturarColaborador(event=None):
-	form = event.Source.Model.Parent
-	# if form.getInt(form.findColumn("AsIdFactColaborador")):
-	# 	mensaje("""No se puede hacer factura de colaborador.\n\
-	# 	La asistencia ya está facturada a un colaborador.""", 48, "Error de facturación")
-	# 	return
-	id = form.getString(form.findColumn("AsId"))
-	sSQL = "EXECUTE PROCEDURE P_FACT_COLABORADOR(" + id + ")"
+def facturarColaborador(form, id):
+	# id = form.getString(form.findColumn("AsId"))
+	# form = event.Source.Model.Parent
+	sql = "SELECT * FROM P_FACT_COLABORADOR(" + id + ")"
 	con = form.ActiveConnection
-	stat = con.prepareStatement(sSQL)
-	stat.executeQuery()
+	stat = con.createStatement()
+	rs = stat.executeQuery(sql)
+	xray(rs)
 	registro_actual = form.getBookmark()
 	form.reload()
 	form.moveToBookmark(registro_actual)
@@ -252,6 +250,7 @@ def filtrarNoCobradas(event=None):
 # Imprime en pdf la factura con id fa_id
 def imprimirFactura(fa_id):
 	bas = CreateScriptService('Basic')
+	cargarConfig()
 	# Filtrar elinforme por el Id de factura
 	sql = 'UPDATE "Filtros" SET "Valor" = ' + fa_id + ' WHERE "FiId" = 1'
 	ds = bas.thisDatabaseDocument.DataSource
