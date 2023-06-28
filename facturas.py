@@ -134,39 +134,31 @@ def establecerTamanio(event=None):
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas y sus detalles con los datos de la asistencia
-def facturarAsistencia(event=None):
-	form = event.Source.Model.Parent
-	if form.getInt(form.findColumn("AsIdFactura")):
-		mensaje("No se puede facturar la asistencia.\nLa asistencia ya está facturada.", 48, "Error de facturación")
-		return
-	id = form.getString(form.findColumn("AsId"))
-	sql = "SELECT FA_ID FROM P_FACTURA_ASISTENCIA(" + id + ")"
+def facturarAsistencia(doc, form, as_id):
+	sql = f"SELECT FA_ID FROM P_FACTURA_ASISTENCIA({as_id})"
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	rs = stat.executeQuery(sql)
 	rs.first()
 	fa_id = rs.getString(rs.findColumn('FA_ID'))
-	registro_actual = form.getBookmark()
-	form.reload()
-	form.moveToBookmark(registro_actual)
-	imprimirFactura(fa_id)
-	facturarColaborador(form, id)
+	imprimirFactura(doc, form, fa_id)
 	return
 
 
 # ----------------------------------------------------------------------
 # Crea un registro de factura de colaborador con sus detalles
-def facturarColaborador(form, id):
-	# id = form.getString(form.findColumn("AsId"))
-	# form = event.Source.Model.Parent
-	sql = "SELECT * FROM P_FACT_COLABORADOR(" + id + ")"
+def facturarColaborador(doc, form, as_id):
+	sql = f"SELECT FC_ID FROM P_FACT_COLABORADOR({as_id})"
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	rs = stat.executeQuery(sql)
-	xray(rs)
-	registro_actual = form.getBookmark()
+	# mensaje(sql)
+	# registro_actual = form.getBookmark()
+	# form.moveToBookmark(registro_actual)
+	while rs.next():
+		fc_id = rs.getString(rs.findColumn('FC_ID'))
+		imprimirFacCol(doc, form, fc_id)
 	form.reload()
-	form.moveToBookmark(registro_actual)
 	return
 
 
@@ -174,8 +166,15 @@ def facturarColaborador(form, id):
 # Crea un registro de facturas y otro de factura de colaborador con
 # sus detalles respectivos desde los datos de la asistencia
 def facturarTodo(event=None):
-	facturarAsistencia(event)
-	facturarColaborador(event)
+	bas = CreateScriptService('Basic')
+	doc = bas.ThisDatabaseDocument
+	form = event.Source.Model.Parent
+	if form.getInt(form.findColumn("AsIdFactura")):
+		mensaje("No se puede facturar la asistencia.\nLa asistencia ya está facturada.", 48, "Error de facturación")
+		return
+	as_id = form.getString(form.findColumn("AsId"))
+	facturarAsistencia(doc, form, as_id)
+	facturarColaborador(doc, form, as_id)
 	return
 
 
@@ -186,31 +185,13 @@ def filtrarAsistencias(event=None):
 	form = event.Source.Model.Parent
 	if boton.State:
 		boton.HelpText = "Mostrar todas las asistencias"
-		form.Filter = """"AsIdFactura" IS NULL"""
 		form.ApplyFilter = True
 		form.reload()
 	else:
 		boton.HelpText = "Mostrar solo asistencias no facturadas"
-		form.Filter = ""
+		form.ApplyFilter = False
 		form.reload()
 	return
-
-# ----------------------------------------------------------------------
-# Establece un filtro de facturas no emitidas en el formulario facturas
-def filtrarColabNoFacturadas(event=None):
-	boton = event.Source.Model
-	form = event.Source.Model.Parent
-	if boton.State:
-		if form.getByName("btnNoPagadas").State:
-			form.getByName("btnNoPagadas").State = 0
-		form.Filter = "FcNumero IS NULL"
-		form.ApplyFilter = True
-		form.reload()
-	else:
-		form.Filter = ""
-		form.reload()
-	return
-
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
@@ -218,13 +199,12 @@ def filtrarColabNoPagadas(event=None):
 	boton = event.Source.Model
 	form = event.Source.Model.Parent
 	if boton.State:
-		if form.getByName("btnNoFacturadas").State:
-			form.getByName("btnNoFacturadas").State = 0
-		form.Filter = "FcFechaPago IS NULL"
+		boton.HelpText = "Mostrar todas las facturas"
 		form.ApplyFilter = True
 		form.reload()
 	else:
-		form.Filter = ""
+		boton.HelpText = "Mostrar solo no pagadas"
+		form.ApplyFilter = False
 		form.reload()
 	return
 
@@ -236,29 +216,28 @@ def filtrarNoCobradas(event=None):
 	form = event.Source.Model.Parent
 	if boton.State:
 		boton.HelpText = "Mostrar todas las facturas"
-		form.Filter = "FaFechaCobro IS NULL"
 		form.ApplyFilter = True
 		form.reload()
 	else:
 		boton.HelpText = "Mostrar solo no cobradas"
-		form.Filter = ""
+		form.ApplyFilter = False
 		form.reload()
 	return
 
 
 # ----------------------------------------------------------------------
 # Imprime en pdf la factura con id fa_id
-def imprimirFactura(fa_id):
+def imprimirFactura(doc, form, fa_id):
 	bas = CreateScriptService('Basic')
 	cargarConfig()
-	# Filtrar elinforme por el Id de factura
+	# Filtrar el informe por el Id de factura
 	sql = 'UPDATE "Filtros" SET "Valor" = ' + fa_id + ' WHERE "FiId" = 1'
-	ds = bas.thisDatabaseDocument.DataSource
-	con = ds.getConnection('', '')
+	# ds = bas.thisDatabaseDocument.DataSource
+	# con = ds.getConnection('', '')
+	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeUpdate(sql)
 	# Abrir el informe y ocultarlo
-	doc = bas.ThisDatabaseDocument
 	informe = doc.ReportDocuments.getByName("FacturaGeneral").open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
@@ -278,13 +257,51 @@ def imprimirFactura(fa_id):
 
 
 # ----------------------------------------------------------------------
-# Ejecuta las rutinas necesariae para iniciar el programa
-def imprimirFacturaForm(event=None):
-	# TODO obtener el id de la factura seleccionada e imprimirla
-	mensaje("Hay que ver somo se llama a imprimirFacturad desde aquí", 48, "Error")
+# Imprime en pdf la factura con id fa_id
+def imprimirFacCol(doc, form, fc_id):
+	bas = CreateScriptService('Basic')
+	sql = f'UPDATE "Filtros" SET "Valor" = {fc_id} WHERE "FiId" = 1'
+	con = form.ActiveConnection
+	stat = con.createStatement()
+	stat.executeUpdate(sql)
+	informe = doc.ReportDocuments.getByName("FacturaColaborador").open()
+	# xray(informe)
+	vistaInforme = informe.CurrentController.Frame.ContainerWindow
+	vistaInforme.setVisible(False)
+	# Obtener el numero de factura para ponerlo en el nombre del archivo
+	sql = f'SELECT "FcNumero" FROM "FacturasColaborador" WHERE "FcId" = {fc_id}'
+	rs = stat.executeQuery(sql)
+	rs.first()
+	numFactura = rs.getString(rs.findColumn('FcNumero'))
+	archivo = uno.systemPathToFileUrl(dir_fac_colab + numFactura + '.pdf')
+	# Imprimir la factura
+	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
+	informe.storeToURL(archivo, args)
+	informe.close(True)
+	# Limpia el filtro para el próximo uso
+	limpiarFiltros()
+	return
+
+
+# ----------------------------------------------------------------------
+# Reimprime una factura de colaborador desde el formulario de facturas
+def imprimirFactColForm(event=None):
+	bas = CreateScriptService('Basic')
+	doc = bas.ThisDatabaseDocument
 	form = event.Source.Model.Parent
-	id = form.getString(form.findColumn("FaId"))
-	imprimirFactura(id)
+	fc_id = form.getString(form.findColumn("FcId"))
+	imprimirFacCol(doc, form, fc_id)
+	return
+
+
+# ----------------------------------------------------------------------
+# Reimprime una factura desde el formulario de facturas
+def imprimirFacturaForm(event=None):
+	bas = CreateScriptService('Basic')
+	doc = bas.ThisDatabaseDocument
+	form = event.Source.Model.Parent
+	fa_id = form.getString(form.findColumn("FaId"))
+	imprimirFactura(doc, form, fa_id)
 	return
 
 
@@ -292,17 +309,16 @@ def imprimirFacturaForm(event=None):
 # Ejecuta las rutinas necesariae para iniciar el programa
 def iniciarPrograma(event=None):
 	Application.OpenConnection()
-	cargarConfig(event)
 	abrirMenuPpal(event)
-	# # TODO: Ocultar Base según necesidades
 	ocultarBase(event)
+	cargarConfig(event)
 	return
 
 
 # ----------------------------------------------------------------------
 # Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def limpiarFiltros(event=None):
-	# Primero vacía el contenido de todos los campos de la tabal auxiliar filtros
+	# Primero vacía el contenido de todos los campos de la tabla auxiliar filtros
 	# Application.OpenConnection()
 	rs = Application.CurrentDb().OpenRecordset("Filtros")
 	rs.Edit()
@@ -325,12 +341,11 @@ def limpiarFiltros(event=None):
 def mensaje(texto, botones=0, titulo=''):
 	bas = CreateScriptService("Basic")
 	return bas.MsgBox(texto, botones, titulo)
+
+
 # ----------------------------------------------------------------------
 # Muestra Base.
-
-
 def mostrarBase(event=None):
-	# DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow, hidden=False)
 	DoCmd.SelectObject(acConstants.acDatabaseWindow)
 	DoCmd.Maximize()
 	return
@@ -369,8 +384,6 @@ def ocultarMenuBarras(event=None):
 def salir(event=None):
 	bas = CreateScriptService('Basic')
 	doc = CreateScriptService("SFDocuments.Document", bas.ThisDatabaseDocument)
-	# TODO Mostar base al cerrar la aplicación
-	mostrarBase(event)
 	# TODO Comentar temporalmente la siguiente línea si se necesita trabajar en Base
 	# doc.RunCommand("CloseDoc")
 	return
