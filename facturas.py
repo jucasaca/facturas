@@ -48,6 +48,14 @@ def abrirMenuPpal(event=None):
 	return
 
 
+def actualizarImporteAsistencia(event=None):
+	bas = CreateScriptService('Basic')
+	doc = event.Source.Parent
+	doc.getByName('Totales').reload()
+	# xray(formImporte)
+	# formImporte.reload()
+	return
+
 
 # ----------------------------------------------------------------------
 # Cargar la configuración de la tabla configuración en variables locales
@@ -73,11 +81,11 @@ def cargarConfig(event=None):
 
 	return
 
+
 # ----------------------------------------------------------------------
 # Rutinas a ejecutar cuando se cierra un formulario
 def cerrarFormulario(event=None):
 	mostrarMenuBarras(event)
-	# TODO ver si se puede evitar llamar siempre a limpiarFiltros
 	limpiarFiltros(event)
 	return
 
@@ -88,6 +96,7 @@ def cerrarMenuPpal(event=None):
 	mostrarMenuBarras(event)  # Muestra el menú y la barras nuevamente
 	salir(event)
 	return
+
 
 # ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
@@ -114,7 +123,7 @@ def establecerTamanio(event=None):
 		h = 450
 	elif tit == 'Asistencias':
 		w = 970
-		h = 730
+		h = 780
 	elif tit == 'Colaboradores':
 		w = 665
 		h = 560
@@ -152,9 +161,6 @@ def facturarColaborador(doc, form, as_id):
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	rs = stat.executeQuery(sql)
-	# mensaje(sql)
-	# registro_actual = form.getBookmark()
-	# form.moveToBookmark(registro_actual)
 	while rs.next():
 		fc_id = rs.getString(rs.findColumn('FC_ID'))
 		imprimirFacCol(doc, form, fc_id)
