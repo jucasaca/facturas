@@ -108,7 +108,7 @@ def establecerTamanio(event=None):
 		h = 690
 	elif tit == 'Clientes':
 		w = 665
-		h = 530
+		h = 550
 	elif tit == 'MenuPpal':
 		w = 545
 		h = 700
@@ -116,8 +116,8 @@ def establecerTamanio(event=None):
 		w =1080
 		h = 685
 	elif tit == 'Proveedores':
-		w = 645
-		h = 505
+		w = 695
+		h = 520
 	elif tit == 'SeriesFactura':
 		w = 638
 		h = 450
@@ -125,8 +125,8 @@ def establecerTamanio(event=None):
 		w = 970
 		h = 780
 	elif tit == 'Colaboradores':
-		w = 665
-		h = 560
+		w = 703
+		h = 620
 	elif tit == 'FacturasColaborador':
 		w = 960
 		h = 730
