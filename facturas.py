@@ -410,6 +410,6 @@ def main(event=None):
 
 # ----------------------------------------------------------------------
 def pruebas(event=None):
-	mensaje('Este es el mensaje de pruebas')
+	mensaje('Este es el mensaje de otras pruebas')
 
 	return
