@@ -16,7 +16,10 @@ def abrirFormGenerico(event=None):
 	bas = CreateScriptService('Basic')
 	doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
 	nombre = event.Source.Model.Tag
+	form = XSCRIPTCONTEXT.getDocument()
+	form.CurrentController.Frame.close(True)
 	doc.OpenFormDocument(nombre)
+
 	return
 
 
@@ -87,6 +90,10 @@ def cargarConfig(event=None):
 def cerrarFormulario(event=None):
 	mostrarMenuBarras(event)
 	limpiarFiltros(event)
+	bas = CreateScriptService('Basic')
+	doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
+	# TODO Sustituir MenuPpal por un formulario genérico
+	doc.OpenFormDocument('MenuPpal')
 	return
 
 
@@ -123,10 +130,10 @@ def establecerTamanio(event=None):
 		h = 450
 	elif tit == 'Asistencias':
 		w = 970
-		h = 780
+		h = 800
 	elif tit == 'Colaboradores':
-		w = 703
-		h = 620
+		w = 685
+		h = 485
 	elif tit == 'FacturasColaborador':
 		w = 960
 		h = 730
@@ -380,7 +387,6 @@ def ocultarBase(event=None):
 def ocultarMenuBarras(event=None):
 	doc = event.Source
 	frame = doc.CurrentController.Frame
-	#  TODO Cambiar la visibilidad para editar el formulario
 	frame.LayoutManager.setVisible(False)
 	establecerTamanio(event)
 
@@ -410,6 +416,11 @@ def main(event=None):
 
 # ----------------------------------------------------------------------
 def pruebas(event=None):
-	mensaje('Este es el mensaje de otras pruebas')
-
+	form = event.Source.Model.Parent
+	tabla = form.getByName('tblAsistencias')
+	vista = XSCRIPTCONTEXT.getDocument().getCurrentController().getControl(tabla)
+	selec = vista.getSelection()
+	for s in selec:
+		form.absolute(s)
+		mensaje(form.Columns.getByName('AsId').getString())
 	return
