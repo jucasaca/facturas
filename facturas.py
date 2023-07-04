@@ -134,9 +134,9 @@ def establecerTamanio(event=None):
 	elif tit == 'Colaboradores':
 		w = 685
 		h = 485
-	elif tit == 'FacturasColaborador':
-		w = 960
-		h = 730
+	elif tit == 'AsistenciasColaborador':
+		w = 880
+		h = 720
 	elif tit == 'Configuracion':
 		w = 740
 		h = 480
@@ -168,9 +168,9 @@ def facturarColaborador(doc, form, as_id):
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	rs = stat.executeQuery(sql)
-	while rs.next():
-		fc_id = rs.getString(rs.findColumn('FC_ID'))
-		imprimirFacCol(doc, form, fc_id)
+	# while rs.next():
+	# 	fc_id = rs.getString(rs.findColumn('FC_ID'))
+	# 	imprimirFacCol(doc, form, fc_id)
 	form.reload()
 	return
 
