@@ -245,20 +245,26 @@ def imprimirFactura(doc, form, fa_id):
 	cargarConfig()
 	# Filtrar el informe por el Id de factura
 	sql = 'UPDATE "Filtros" SET "Valor" = ' + fa_id + ' WHERE "FiId" = 1'
-	# ds = bas.thisDatabaseDocument.DataSource
-	# con = ds.getConnection('', '')
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeUpdate(sql)
-	# Abrir el informe y ocultarlo
-	informe = doc.ReportDocuments.getByName("FacturaGeneral").open()
-	vistaInforme = informe.CurrentController.Frame.ContainerWindow
-	vistaInforme.setVisible(False)
-	# Obtener el numero de factura para ponerlo en el nombre del archivo
-	sql = 'SELECT "FaNumero" FROM "Facturas" WHERE "FaId" = ' + fa_id
+	# Obtener el número de factura y el concepto
+	sql = f'SELECT "FaNumero", "FaConcepto" FROM "Facturas" WHERE "FaId" = {fa_id}'
 	rs = stat.executeQuery(sql)
 	rs.first()
 	numFactura = rs.getString(rs.findColumn('FaNumero'))
+	concepto = rs.getString(rs.findColumn('FaConcepto'))
+	# Si tiene un concepto, se imprime la factura de concepto, si no la general
+	if concepto:
+		tipoFactura = 'FacturaConcepto'
+	else:
+		tipoFactura = 'FacturaGeneral'
+	# Abrir el informe y ocultarlo
+	informe = doc.ReportDocuments.getByName(tipoFactura).open()
+	vistaInforme = informe.CurrentController.Frame.ContainerWindow
+	vistaInforme.setVisible(False)
+
+
 	archivo = uno.systemPathToFileUrl(dir_facturas + numFactura + '.pdf')
 	# Imprimir la factura
 	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
