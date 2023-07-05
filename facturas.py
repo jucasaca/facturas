@@ -163,12 +163,14 @@ def facturarAsistencia(doc, form, as_id):
 
 # ----------------------------------------------------------------------
 # Crea un registro de factura de colaborador con sus detalles
-def facturarColaborador(doc, form, as_id):
-	sql = f"SELECT FC_ID FROM P_FACT_COLABORADOR({as_id})"
+def crearAsistColaborador(doc, form, as_id):
+	# sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
+	sql = f"EXECUTE PROCEDURE P_ASIST_COLABORADOR({as_id})"
 	con = form.ActiveConnection
 	stat = con.createStatement()
-	rs = stat.executeQuery(sql)
-	# while rs.next():
+	# rs = stat.executeQuery(sql)
+	stat.executeQuery(sql)
+	# rs.next()
 	# 	fc_id = rs.getString(rs.findColumn('FC_ID'))
 	# 	imprimirFacCol(doc, form, fc_id)
 	form.reload()
@@ -187,7 +189,7 @@ def facturarTodo(event=None):
 		return
 	as_id = form.getString(form.findColumn("AsId"))
 	facturarAsistencia(doc, form, as_id)
-	facturarColaborador(doc, form, as_id)
+	crearAsistColaborador(doc, form, as_id)
 	return
 
 
