@@ -112,10 +112,10 @@ def establecerTamanio(event=None):
 	tit = titulo[1].strip()
 	if tit == 'Facturas':
 		w = 960
-		h = 690
+		h = 760
 	elif tit == 'Clientes':
-		w = 665
-		h = 550
+		w = 748
+		h = 690
 	elif tit == 'MenuPpal':
 		w = 545
 		h = 700
@@ -123,18 +123,21 @@ def establecerTamanio(event=None):
 		w =1080
 		h = 685
 	elif tit == 'Proveedores':
-		w = 695
-		h = 520
+		w = 748
+		h = 685
 	elif tit == 'SeriesFactura':
 		w = 638
 		h = 450
 	elif tit == 'Asistencias':
-		w = 970
-		h = 800
+		w = 973
+		h = 790
 	elif tit == 'Colaboradores':
 		w = 685
 		h = 485
 	elif tit == 'AsistenciasColaborador':
+		w = 880
+		h = 720
+	elif tit == 'FacturasColaboradores':
 		w = 880
 		h = 720
 	elif tit == 'Configuracion':
@@ -164,14 +167,14 @@ def facturarAsistencia(doc, form, as_id):
 # ----------------------------------------------------------------------
 # Crea un registro de factura de colaborador con sus detalles
 def crearAsistColaborador(doc, form, as_id):
-	# sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
-	sql = f"EXECUTE PROCEDURE P_ASIST_COLABORADOR({as_id})"
+	sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
+	# sql = f"EXECUTE PROCEDURE P_ASIST_COLABORADOR({as_id})"
 	con = form.ActiveConnection
 	stat = con.createStatement()
-	# rs = stat.executeQuery(sql)
-	stat.executeQuery(sql)
-	# rs.next()
-	# 	fc_id = rs.getString(rs.findColumn('FC_ID'))
+	rs = stat.executeQuery(sql)
+	# stat.executeQuery(sql)
+	rs.first()
+	fc_id = rs.getString(rs.findColumn('AC_ID'))
 	# 	imprimirFacCol(doc, form, fc_id)
 	form.reload()
 	return
@@ -428,7 +431,19 @@ def pruebas(event=None):
 	tabla = form.getByName('tblAsistencias')
 	vista = XSCRIPTCONTEXT.getDocument().getCurrentController().getControl(tabla)
 	selec = vista.getSelection()
-	for s in selec:
-		form.absolute(s)
-		mensaje(form.Columns.getByName('AsId').getString())
+
+	con = form.ActiveConnection
+	stat = con.createStatement()
+	sql = 'DELETE FROM "Parametros" WHERE 1=1'
+	stat.executeUpdate(sql)
+	if selec:
+		cad = ''
+		for s in selec:
+			form.absolute(s)
+			valor = form.Columns.getByName('AcId').getString()
+			sql = f'INSERT INTO "Parametros" ("PaValor") VALUES ({valor})'
+			stat.executeUpdate(sql)
+	else:
+		mensaje('Debe seleccionar alguna fila')
+
 	return
