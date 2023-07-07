@@ -106,6 +106,20 @@ def cerrarMenuPpal(event=None):
 
 
 # ----------------------------------------------------------------------
+# Crea un registro de asistencia de colaborador con sus detalles
+def crearAsistColaborador(doc, form, as_id):
+	sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
+	con = form.ActiveConnection
+	stat = con.createStatement()
+	rs = stat.executeQuery(sql)
+	rs.first()
+	# fc_id = rs.getString(rs.findColumn('AC_ID'))
+	# 	imprimirFacCol(doc, form, fc_id)
+	form.reload()
+	return
+
+
+# ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
 def establecerTamanio(event=None):
 	titulo = event.Source.Title.split(':')
@@ -165,20 +179,38 @@ def facturarAsistencia(doc, form, as_id):
 
 
 # ----------------------------------------------------------------------
-# Crea un registro de factura de colaborador con sus detalles
-def crearAsistColaborador(doc, form, as_id):
-	sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
-	# sql = f"EXECUTE PROCEDURE P_ASIST_COLABORADOR({as_id})"
+# Crea un registro de facturas de colaborador y sus detalles con los datos de la asistencia
+def facturarColaborador(event=None):
+	form = event.Source.Model.Parent
+	doc = XSCRIPTCONTEXT.getDocument()
+	tabla = form.getByName('tblAsistencias')
+	vista = doc.getCurrentController().getControl(tabla)
+	selec = vista.getSelection()
+
 	con = form.ActiveConnection
 	stat = con.createStatement()
+	sql = 'DELETE FROM "Parametros" WHERE 1=1'
+	stat.executeUpdate(sql)
+	if not selec:  # Si no hay selección, sale de la función
+		mensaje('Debe seleccionar alguna fila')
+		return
+	for s in selec:
+		form.absolute(s)
+		valor = form.Columns.getByName('AcId').getString()
+		sql = f'INSERT INTO "Parametros" ("PaValor") VALUES ({valor})'
+		stat.executeUpdate(sql)
+	sql = 'SELECT FC_ID FROM P_FACT_COLAB'
 	rs = stat.executeQuery(sql)
-	# stat.executeQuery(sql)
-	rs.first()
-	fc_id = rs.getString(rs.findColumn('AC_ID'))
-	# 	imprimirFacCol(doc, form, fc_id)
-	form.reload()
-	return
+	while rs.next():
+		fact = rs.getString(rs.findColumn('FC_ID'))
+		imprimirFacCol(doc, form, fact)
+		mensaje(sql)
+		pass
 
+	# for reg in facturas:
+	# 	fact = reg.Columns.getByName('FC_ID').getString()
+	# 	mensaje(fact)
+	return
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas y otro de factura de colaborador con
@@ -211,6 +243,21 @@ def filtrarAsistencias(event=None):
 		form.reload()
 	return
 
+
+# ----------------------------------------------------------------------
+# Establece un filtro de facturas no emitidas en el formulario facturas
+def filtrarAsistenciasColab(event=None):
+	boton = event.Source.Model
+	form = event.Source.Model.Parent
+	if boton.State:
+		boton.HelpText = "Mostrar todas las asistencias"
+		form.ApplyFilter = True
+		form.reload()
+	else:
+		boton.HelpText = "Mostrar solo asistencias no facturadas"
+		form.ApplyFilter = False
+		form.reload()
+	return
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
 def filtrarColabNoPagadas(event=None):
@@ -288,12 +335,11 @@ def imprimirFacCol(doc, form, fc_id):
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeUpdate(sql)
-	informe = doc.ReportDocuments.getByName("FacturaColaborador").open()
-	# xray(informe)
+	informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaColaborador').open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
 	# Obtener el numero de factura para ponerlo en el nombre del archivo
-	sql = f'SELECT "FcNumero" FROM "FacturasColaborador" WHERE "FcId" = {fc_id}'
+	sql = f'SELECT "FcNumero" FROM "FacturasColaboradores" WHERE "FcId" = {fc_id}'
 	rs = stat.executeQuery(sql)
 	rs.first()
 	numFactura = rs.getString(rs.findColumn('FcNumero'))
