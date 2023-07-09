@@ -204,12 +204,7 @@ def facturarColaborador(event=None):
 	while rs.next():
 		fact = rs.getString(rs.findColumn('FC_ID'))
 		imprimirFacCol(doc, form, fact)
-		mensaje(sql)
-		pass
-
-	# for reg in facturas:
-	# 	fact = reg.Columns.getByName('FC_ID').getString()
-	# 	mensaje(fact)
+	form.reload()
 	return
 
 # ----------------------------------------------------------------------
@@ -253,11 +248,15 @@ def filtrarAsistenciasColab(event=None):
 		boton.HelpText = "Mostrar todas las asistencias"
 		form.ApplyFilter = True
 		form.reload()
+		pass
 	else:
 		boton.HelpText = "Mostrar solo asistencias no facturadas"
 		form.ApplyFilter = False
 		form.reload()
-	return
+		pass
+	# return
+
+
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
 def filtrarColabNoPagadas(event=None):
