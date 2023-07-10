@@ -51,19 +51,18 @@ def abrirMenuPpal(event=None):
 	return
 
 
+# ----------------------------------------------------------------------
+# Actualiza el importe de las asistencias después de añadir un detalle
 def actualizarImporteAsistencia(event=None):
-	bas = CreateScriptService('Basic')
 	doc = event.Source.Parent
 	doc.getByName('Totales').reload()
-	# xray(formImporte)
-	# formImporte.reload()
 	return
 
 
 # ----------------------------------------------------------------------
 # Cargar la configuración de la tabla configuración en variables locales
 def cargarConfig(event=None):
-	bas = CreateScriptService(('Basic'))
+	bas = CreateScriptService('Basic')
 	ds = bas.thisDatabaseDocument.DataSource
 	con = ds.getConnection('','')
 	stat = con.createStatement()
@@ -107,14 +106,12 @@ def cerrarMenuPpal(event=None):
 
 # ----------------------------------------------------------------------
 # Crea un registro de asistencia de colaborador con sus detalles
-def crearAsistColaborador(doc, form, as_id):
+def crearAsistColaborador(form, as_id):
 	sql = f"SELECT AC_ID FROM P_ASIST_COLABORADOR({as_id})"
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	rs = stat.executeQuery(sql)
 	rs.first()
-	# fc_id = rs.getString(rs.findColumn('AC_ID'))
-	# 	imprimirFacCol(doc, form, fc_id)
 	form.reload()
 	return
 
@@ -203,9 +200,25 @@ def facturarColaborador(event=None):
 	rs = stat.executeQuery(sql)
 	while rs.next():
 		fact = rs.getString(rs.findColumn('FC_ID'))
-		imprimirFacCol(doc, form, fact)
+		imprimirFacCol(form, fact)
 	form.reload()
 	return
+
+
+# ----------------------------------------------------------------------
+# Crea un registro de factura proforma y sus detalles con los datos de la asistencia
+def facturarProforma(event=None):
+	form = event.Source.Model.Parent
+	as_id = form.getInt(form.findColumn("AsId"))
+	sql = f"SELECT FP_ID FROM P_FACTURA_PROFORMA({as_id})"
+	con = form.ActiveConnection
+	stat = con.createStatement()
+	rs = stat.executeQuery(sql)
+	rs.first()
+	fp_id = rs.getString(rs.findColumn('FP_ID'))
+	imprimirProforma(form, fp_id)
+	return
+
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas y otro de factura de colaborador con
@@ -219,7 +232,7 @@ def facturarTodo(event=None):
 		return
 	as_id = form.getString(form.findColumn("AsId"))
 	facturarAsistencia(doc, form, as_id)
-	crearAsistColaborador(doc, form, as_id)
+	crearAsistColaborador(form, as_id)
 	return
 
 
@@ -292,7 +305,6 @@ def filtrarNoCobradas(event=None):
 # ----------------------------------------------------------------------
 # Imprime en pdf la factura con id fa_id
 def imprimirFactura(doc, form, fa_id):
-	bas = CreateScriptService('Basic')
 	cargarConfig()
 	# Filtrar el informe por el Id de factura
 	sql = 'UPDATE "Filtros" SET "Valor" = ' + fa_id + ' WHERE "FiId" = 1'
@@ -314,8 +326,7 @@ def imprimirFactura(doc, form, fa_id):
 	informe = doc.ReportDocuments.getByName(tipoFactura).open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
-
-
+	# Crea el path+nombre de la factura para almacenar el PDF
 	archivo = uno.systemPathToFileUrl(dir_facturas + numFactura + '.pdf')
 	# Imprimir la factura
 	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
@@ -328,7 +339,7 @@ def imprimirFactura(doc, form, fa_id):
 
 # ----------------------------------------------------------------------
 # Imprime en pdf la factura con id fa_id
-def imprimirFacCol(doc, form, fc_id):
+def imprimirFacCol(form, fc_id):
 	bas = CreateScriptService('Basic')
 	sql = f'UPDATE "Filtros" SET "Valor" = {fc_id} WHERE "FiId" = 1'
 	con = form.ActiveConnection
@@ -337,7 +348,7 @@ def imprimirFacCol(doc, form, fc_id):
 	informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaColaborador').open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
-	# Obtener el numero de factura para ponerlo en el nombre del archivo
+	# Obtener el número de factura para ponerlo en el nombre del archivo
 	sql = f'SELECT "FcNumero" FROM "FacturasColaboradores" WHERE "FcId" = {fc_id}'
 	rs = stat.executeQuery(sql)
 	rs.first()
@@ -355,11 +366,9 @@ def imprimirFacCol(doc, form, fc_id):
 # ----------------------------------------------------------------------
 # Reimprime una factura de colaborador desde el formulario de facturas
 def imprimirFactColForm(event=None):
-	bas = CreateScriptService('Basic')
-	doc = bas.ThisDatabaseDocument
 	form = event.Source.Model.Parent
 	fc_id = form.getString(form.findColumn("FcId"))
-	imprimirFacCol(doc, form, fc_id)
+	imprimirFacCol(form, fc_id)
 	return
 
 
@@ -373,9 +382,27 @@ def imprimirFacturaForm(event=None):
 	imprimirFactura(doc, form, fa_id)
 	return
 
-
 # ----------------------------------------------------------------------
-# Ejecuta las rutinas necesariae para iniciar el programa
+# Imprime en pdf la factura con id fa_id
+def imprimirProforma(form, fp_id):
+	bas = CreateScriptService('Basic')
+	sql = f'UPDATE "Filtros" SET "Valor" = {fp_id} WHERE "FiId" = 1'
+	con = form.ActiveConnection
+	stat = con.createStatement()
+	stat.executeUpdate(sql)
+	informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaProforma').open()
+	vistaInforme = informe.CurrentController.Frame.ContainerWindow
+	vistaInforme.setVisible(False)
+	archivo = uno.systemPathToFileUrl(dir_facturas + 'PROFORMA-' + fp_id + '.pdf')
+	# Imprimir la factura
+	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
+	informe.storeToURL(archivo, args)
+	informe.close(True)
+	# Limpia el filtro para el próximo uso
+	limpiarFiltros()
+	return
+# ----------------------------------------------------------------------
+# Ejecuta las rutinas necesarias para iniciar el programa
 def iniciarPrograma(event=None):
 	Application.OpenConnection()
 	abrirMenuPpal(event)
@@ -482,7 +509,6 @@ def pruebas(event=None):
 	sql = 'DELETE FROM "Parametros" WHERE 1=1'
 	stat.executeUpdate(sql)
 	if selec:
-		cad = ''
 		for s in selec:
 			form.absolute(s)
 			valor = form.Columns.getByName('AcId').getString()
