@@ -178,6 +178,7 @@ def facturarAsistencia(doc, form, as_id):
 # ----------------------------------------------------------------------
 # Crea un registro de facturas de colaborador y sus detalles con los datos de la asistencia
 def facturarColaborador(event=None):
+	bas = CreateScriptService('Basic')
 	form = event.Source.Model.Parent
 	doc = XSCRIPTCONTEXT.getDocument()
 	tabla = form.getByName('tblAsistencias')
@@ -189,7 +190,7 @@ def facturarColaborador(event=None):
 	sql = 'DELETE FROM "Parametros" WHERE 1=1'
 	stat.executeUpdate(sql)
 	if not selec:  # Si no hay selección, sale de la función
-		mensaje('Debe seleccionar alguna fila')
+		mensaje('Debe seleccionar alguna fila', bas.MB_ICONINFORMATION, 'Error en la selección')
 		return
 	for s in selec:
 		form.absolute(s)
@@ -228,7 +229,7 @@ def facturarTodo(event=None):
 	doc = bas.ThisDatabaseDocument
 	form = event.Source.Model.Parent
 	if form.getInt(form.findColumn("AsIdFactura")):
-		mensaje("No se puede facturar la asistencia.\nLa asistencia ya está facturada.", 48, "Error de facturación")
+		mensaje("No se puede facturar.\nLa asistencia ya está facturada.", bas.MB_ICONEXCLAMATION, "Error de facturación")
 		return
 	as_id = form.getString(form.findColumn("AsId"))
 	facturarAsistencia(doc, form, as_id)
@@ -345,6 +346,7 @@ def imprimirFacCol(form, fc_id):
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeUpdate(sql)
+	# Abrir el informe y ocultarlo
 	informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaColaborador').open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
@@ -390,11 +392,13 @@ def imprimirProforma(form, fp_id):
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeUpdate(sql)
+	# abrir el informe y ocultarlo
 	informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaProforma').open()
 	vistaInforme = informe.CurrentController.Frame.ContainerWindow
 	vistaInforme.setVisible(False)
+	# Nombre para el PDF creado
 	archivo = uno.systemPathToFileUrl(dir_facturas + 'PROFORMA-' + fp_id + '.pdf')
-	# Imprimir la factura
+	# Crear el pdf, guardarlo y cerrar el informe
 	args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
 	informe.storeToURL(archivo, args)
 	informe.close(True)
@@ -414,8 +418,7 @@ def iniciarPrograma(event=None):
 # ----------------------------------------------------------------------
 # Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def limpiarFiltros(event=None):
-	# Primero vacía el contenido de todos los campos de la tabla auxiliar filtros
-	# Application.OpenConnection()
+	# Primero vaciar el contenido de todos los campos de la tabla auxiliar filtros
 	rs = Application.CurrentDb().OpenRecordset("Filtros")
 	rs.Edit()
 	for f in rs.Fields():
@@ -426,7 +429,7 @@ def limpiarFiltros(event=None):
 		source = event.Source  # ¿Quién llama a la función?
 		# Si es un botón
 		if source.ImplementationName == 'com.sun.star.form.OButtonControl':
-			# recargamos todos lo formularios para que actualicen los datos y se muestren todos
+			# recargar todos lo formularios para que actualicen los datos y se muestren todos
 			for form in source.Model.Parent.Parent:  # la colección de formularios
 				form.reload()
 	return
@@ -506,8 +509,10 @@ def pruebas(event=None):
 
 	con = form.ActiveConnection
 	stat = con.createStatement()
+	# Primero vaciar la tabla de parámetros
 	sql = 'DELETE FROM "Parametros" WHERE 1=1'
 	stat.executeUpdate(sql)
+	# Si hay selecciones guardar los id en la tabla de parámetros
 	if selec:
 		for s in selec:
 			form.absolute(s)
