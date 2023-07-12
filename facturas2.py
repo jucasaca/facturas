@@ -230,12 +230,13 @@ def facturar(event=None):
 		return
 	fa_id = form.getString(form.findColumn("FaId"))
 	sql = f'EXECUTE PROCEDURE P_FACTURAR({fa_id})'
-	mensaje(sql)
 	con = form.ActiveConnection
 	stat = con.createStatement()
 	stat.executeQuery(sql)
-	mensaje(fa_id)
-	# imprimir_factura(form, fa_id)
+	pos = form.getBookmark()
+	form.reload()
+	form.moveToBookmark(pos)
+	imprimir_factura(form, fa_id)
 	return
 
 
@@ -396,9 +397,13 @@ def imprimirFactColForm(event=None):
 # ----------------------------------------------------------------------
 # Reimprime una factura desde el formulario de facturas
 def reimprimir_factura(event=None):
-	bas = CreateScriptService('Basic')
-	doc = bas.ThisDatabaseDocument
+	bas =CreateScriptService('Basic')
 	form = event.Source.Model.Parent
+	bloq = form.getBoolean(form.findColumn("FaBloqueada"))
+	if not bloq:
+		mensaje('La factura no se puede imprimir porque no está generada',
+				bas.MB_ICONINFORMATION, 'Error de impresión')
+		return
 	fa_id = form.getString(form.findColumn("FaId"))
 	imprimir_factura(form, fa_id)
 	return
