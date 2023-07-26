@@ -9,6 +9,7 @@ import uno
 
 dir_facturas = ''
 dir_fac_colab = ''
+TDB = None
 
 
 # ----------------------------------------------------------------------
@@ -98,6 +99,9 @@ def cargar_config(event=None):
     global dir_fac_colab
     dir_fac_colab = rs.getString(rs.findColumn('CfValor'))
 
+    # El documento de base de datos
+    TDB = bas.ThisDatabaseDocument
+
     return
 
 
@@ -124,48 +128,47 @@ def cerrar_menu_ppal(event=None):
 # ----------------------------------------------------------------------
 # Ajusta el tamaño de los formularios
 def establecer_tamanio(event=None):
-    titulo = event.Source.Title.split(':')
-    tit = titulo[1].strip()
-    if tit == 'Facturas':
+    ui = CreateScriptService('UI')
+    ventana = ui.ActiveWindow.split(':')
+    titulo = ventana[1].strip()
+    if titulo == 'Facturas':
         w = 937
         h = 760
-    elif tit == 'Clientes':
+    elif titulo == 'Clientes':
         w = 748
         h = 690
-    elif tit == 'MenuPpal':
+    elif titulo == 'MenuPpal':
         w = 545
         h = 750
-    elif tit == 'Gastos':
+    elif titulo == 'Gastos':
         w = 1035
         h = 673
-    elif tit == 'Proveedores':
+    elif titulo == 'Proveedores':
         w = 748
         h = 685
-    elif tit == 'SeriesFactura':
+    elif titulo == 'SeriesFactura':
         w = 638
         h = 450
-    elif tit == 'Asistencias':
+    elif titulo == 'Asistencias':
         w = 973
         h = 790
-    elif tit == 'Colaboradores':
+    elif titulo == 'Colaboradores':
         w = 685
         h = 485
-    elif tit == 'AstColab':
+    elif titulo == 'AstColab':
         w = 920
         h = 597
-    elif tit == 'FacturasColaborador':
+    elif titulo == 'FacturasColaborador':
         w = 880
         h = 720
-    elif tit == 'Configuracion':
+    elif titulo == 'Configuracion':
         w = 740
         h = 480
     else:
         w = -1
         h = -1
         mensaje('Tamaño->No se ha encontrado el formulario')
-    Application.OpenConnection()
-    DoCmd.MoveSize(width=w, height=h)
-
+    ui.Resize(width=w, height=h)
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas de colaborador y sus detalles con los datos de la asistencia
@@ -194,6 +197,7 @@ def facturar_colaborador(event=None):
     while rs.next():
         fact = rs.getString(rs.findColumn('FC_ID'))
         imprimir_colaborador(form, fact)
+        bas.MsgBox(f'Se ha imprimido la factura\ncon identificador {fact}', bas.MB_ICONINFORMATION, 'Facturar')
     form.reload()
     return
 
@@ -244,9 +248,7 @@ def filtrarAsistenciasColab(event=None):
         form.ApplyFilter = False
         form.reload()
         pass
-
-
-# return
+    return
 
 
 # ----------------------------------------------------------------------
@@ -320,7 +322,7 @@ def imprimir_factura(form, fa_id):
 
 # ----------------------------------------------------------------------
 # Imprime en pdf la factura con id fa_id
-def imprimir_colaborador(form, fc_id):
+def imprimir_colaborador(form, fc_id, doc=None):
     bas = CreateScriptService('Basic')
     sql = f'UPDATE "Filtros" SET "Valor" = {fc_id} WHERE "FiId" = 1'
     con = form.ActiveConnection
@@ -328,7 +330,7 @@ def imprimir_colaborador(form, fc_id):
     stat.executeUpdate(sql)
     # Abrir el informe y ocultarlo
     informe = bas.ThisDatabaseDocument.ReportDocuments.getByName('FacturaColaborador').open()
-    # informe = doc.getByName('FacturaColaborador').open()
+
     vistaInforme = informe.CurrentController.Frame.ContainerWindow
     vistaInforme.setVisible(False)
     # Obtener el número de factura para ponerlo en el nombre del archivo
@@ -336,11 +338,13 @@ def imprimir_colaborador(form, fc_id):
     rs = stat.executeQuery(sql)
     rs.first()
     numFactura = rs.getString(rs.findColumn('FcNumero'))
+
+
     archivo = uno.systemPathToFileUrl(dir_fac_colab + numFactura + '.pdf')
     # Imprimir la factura
     args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
     informe.storeToURL(archivo, args)
-    informe.close(True)
+    informe.close(False)
     # Limpia el filtro para el próximo uso
     limpiar_filtros()
     return
