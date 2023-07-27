@@ -64,13 +64,8 @@ def actualizarImporteAsistencia(event=None):
 
 # ----------------------------------------------------------------------
 # Cargar la configuración de la tabla configuración en variables locales
-def calcular_factura(event=None):
+def refrescar_factura(event=None):
     form = event.Source.Parent  # Obtiene el formulario principal (porque hemos llamado desde SubForm)
-    fa_id = form.getString(form.findColumn("FaId"))
-    con = form.ActiveConnection
-    stat = con.createStatement()
-    sql = f'EXECUTE PROCEDURE P_CALC_FACTURA({fa_id})'
-    stat.execute(sql)
     pos = form.getBookmark()
     form.reload()
     form.moveToBookmark(pos)
@@ -273,11 +268,13 @@ def filtrar_no_cobradas(event=None):
     boton = event.Source.Model
     form = event.Source.Model.Parent
     if boton.State:
-        boton.HelpText = "Mostrar todas las facturas"
+        boton.HelpText = 'Mostrar todas las facturas'
+        # xray(form)
+        form.Filter = '"FaFCobro" IS NULL'
         form.ApplyFilter = True
         form.reload()
     else:
-        boton.HelpText = "Mostrar solo no cobradas"
+        boton.HelpText = 'Mostrar solo no cobradas'
         form.ApplyFilter = False
         form.reload()
     return
