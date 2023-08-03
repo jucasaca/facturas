@@ -33,16 +33,16 @@ def abrir_formulario(event=None):
     return
 
 
-# ----------------------------------------------------------------------
-# Abre un informe. El nombre del informe debe estar en el Tag del 
-# control que lo llama
-def abrirInformeGenerico(event=None):
-    nombre = event.Source.Model.Tag
-    bas = CreateScriptService('Basic')
-    doc = bas.ThisDatabaseDocument
-    repo = doc.ReportDocuments.getByName(nombre)
-    # doc.ReportDocuments.getByName(nombre).open()
-    return
+# # ----------------------------------------------------------------------
+# # Abre un informe. El nombre del informe debe estar en el Tag del
+# # control que lo llama
+# def abrirInformeGenerico(event=None):
+#     nombre = event.Source.Model.Tag
+#     bas = CreateScriptService('Basic')
+#     doc = bas.ThisDatabaseDocument
+#     repo = doc.ReportDocuments.getByName(nombre)
+#     # doc.ReportDocuments.getByName(nombre).open()
+#     return
 
 
 # ----------------------------------------------------------------------
@@ -54,12 +54,12 @@ def abrir_menu_ppal(event=None):
     return
 
 
-# ----------------------------------------------------------------------
-# Actualiza el importe de las asistencias después de añadir un detalle
-def actualizarImporteAsistencia(event=None):
-    doc = event.Source.Parent
-    doc.getByName('Totales').reload()
-    return
+# # ----------------------------------------------------------------------
+# # Actualiza el importe de las asistencias después de añadir un detalle
+# def actualizarImporteAsistencia(event=None):
+#     doc = event.Source.Parent
+#     doc.getByName('Totales').reload()
+#     return
 
 
 # ----------------------------------------------------------------------
@@ -127,14 +127,14 @@ def establecer_tamanio(event=None):
     ventana = ui.ActiveWindow.split(':')
     titulo = ventana[1].strip()
     if titulo == 'Facturas':
-        w = 937
-        h = 760
+        w = 1175
+        h = 920
     elif titulo == 'Clientes':
         w = 748
         h = 690
     elif titulo == 'MenuPpal':
-        w = 545
-        h = 750
+        w = 680
+        h = 870
     elif titulo == 'Gastos':
         w = 1035
         h = 673
@@ -154,8 +154,8 @@ def establecer_tamanio(event=None):
         w = 920
         h = 597
     elif titulo == 'FacturasColaborador':
-        w = 880
-        h = 720
+        w = 837
+        h = 697
     elif titulo == 'Configuracion':
         w = 740
         h = 480
@@ -228,31 +228,32 @@ def facturar(event=None):
     return
 
 
-# ----------------------------------------------------------------------
-# Establece un filtro de facturas no emitidas en el formulario facturas
-def filtrarAsistenciasColab(event=None):
-    boton = event.Source.Model
-    form = event.Source.Model.Parent
-    if boton.State:
-        boton.HelpText = "Mostrar todas las asistencias"
-        form.ApplyFilter = True
-        form.reload()
-        pass
-    else:
-        boton.HelpText = "Mostrar solo asistencias no facturadas"
-        form.ApplyFilter = False
-        form.reload()
-        pass
-    return
+# # ----------------------------------------------------------------------
+# # Establece un filtro de facturas no emitidas en el formulario facturas
+# def filtrarAsistenciasColab(event=None):
+#     boton = event.Source.Model
+#     form = event.Source.Model.Parent
+#     if boton.State:
+#         boton.HelpText = "Mostrar todas las asistencias"
+#         form.ApplyFilter = True
+#         form.reload()
+#         pass
+#     else:
+#         boton.HelpText = "Mostrar solo asistencias no facturadas"
+#         form.ApplyFilter = False
+#         form.reload()
+#         pass
+#     return
 
 
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
-def filtrarColabNoPagadas(event=None):
+def filtrar_colab_no_pagadas(event=None):
     boton = event.Source.Model
     form = event.Source.Model.Parent
     if boton.State:
         boton.HelpText = "Mostrar todas las facturas"
+        form.Filter = '"FcFPago" IS NULL'
         form.ApplyFilter = True
         form.reload()
     else:
@@ -269,7 +270,6 @@ def filtrar_no_cobradas(event=None):
     form = event.Source.Model.Parent
     if boton.State:
         boton.HelpText = 'Mostrar todas las facturas'
-        # xray(form)
         form.Filter = '"FaFCobro" IS NULL'
         form.ApplyFilter = True
         form.reload()
@@ -482,7 +482,7 @@ def salir(event=None):
 
 
 # ----------------------------------------------------------------------
-# Ventana de mensajes tipo MsgBox
+# Mostrar XRay
 def xray(objeto):
     bas = CreateScriptService("Basic")
     bas.Xray(objeto)
