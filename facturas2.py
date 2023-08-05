@@ -126,44 +126,65 @@ def establecer_tamanio(event=None):
     ui = CreateScriptService('UI')
     ventana = ui.ActiveWindow.split(':')
     titulo = ventana[1].strip()
+    x = -1
+    y = -1
+    w = -1
+    h = -1
+    
     if titulo == 'Facturas':
-        w = 1175
-        h = 920
-    elif titulo == 'Clientes':
-        w = 748
+        w = 938
         h = 690
+        x = 220
+        y = 35
+    elif titulo == 'Clientes':
+        w = 710
+        h = 620
+        x = 350
+        y = 70
     elif titulo == 'MenuPpal':
-        w = 680
-        h = 870
+        w = 425
+        h = 570
+        x = 450
+        y = 80
     elif titulo == 'Gastos':
         w = 1035
-        h = 673
+        h = 648
+        x = 170
+        y = 50
     elif titulo == 'Proveedores':
-        w = 748
-        h = 685
+        w = 710
+        h = 585
+        x = 350
+        y = 80
     elif titulo == 'SeriesFactura':
         w = 638
-        h = 450
-    elif titulo == 'Asistencias':
-        w = 973
-        h = 790
+        h = 445
+        x = 350
+        y = 80
     elif titulo == 'Colaboradores':
-        w = 685
-        h = 485
+        w = 650
+        h = 470
+        x = 350
+        y = 80
     elif titulo == 'AstColab':
         w = 920
         h = 597
+        x = 230
+        y = 70
     elif titulo == 'FacturasColaborador':
         w = 837
-        h = 697
+        h = 667
+        x = 260
+        y = 40
     elif titulo == 'Configuracion':
-        w = 740
-        h = 480
-    else:
-        w = -1
-        h = -1
-        mensaje('Tamaño->No se ha encontrado el formulario')
-    ui.Resize(width=w, height=h)
+        w = 730
+        h = 475
+        x = 350
+        y = 80
+    # ~ else:
+        # ~ mensaje(f'Tamaño->No se ha encontrado el formulario {titulo}')
+
+    ui.Resize(width=w, height=h, left= x, top=y)
 
 # ----------------------------------------------------------------------
 # Crea un registro de facturas de colaborador y sus detalles con los datos de la asistencia
@@ -491,7 +512,7 @@ def xray(objeto):
 # ----------------------------------------------------------------------
 def main(event=None):
     # from Xlib import display
-
+    xray('hola')
     return
 
 
