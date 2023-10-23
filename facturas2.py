@@ -4,12 +4,10 @@ import time
 from com.sun.star.document import DocumentEvent
 from com.sun.star.beans import PropertyValue
 from scriptforge import CreateScriptService
-from access2base import DoCmd, Application, acConstants, THISDATABASEDOCUMENT
 import uno
 
 dir_facturas = ''
 dir_fac_colab = ''
-TDB = None
 
 
 # ----------------------------------------------------------------------
@@ -18,11 +16,32 @@ TDB = None
 def abrir_form_gen(event=None):
     bas = CreateScriptService('Basic')
     doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
+    # Obtiene el nombre del formulario a abrir de la etiqueta del ¿botón? que lo llama
     nombre = event.Source.Model.Tag
-    form = XSCRIPTCONTEXT.getDocument()
-    form.CurrentController.Frame.close(True)
+    # Obtiene el nombre del formulario actual a partir del título de la ventana
+    ui = CreateScriptService('UI')
+    ventana = ui.ActiveWindow.split(':')
+    titulo = ventana[1].strip()
+    # Abre el nuevo formulario
     doc.OpenFormDocument(nombre)
+    # Cierra el formulario actual
+    bas.ThisDatabaseDocument.FormDocuments.getByName(titulo).close()
+    return
 
+# ----------------------------------------------------------------------
+# Abre un INFORME. El nombre del INFORME debe estar en el Tag del
+# control que lo llama
+def abrir_report_gen(event=None):
+    bas = CreateScriptService('Basic')
+    doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
+    # Obtiene el nombre del informe a abrir de la etiqueta del ¿botón? que lo llama
+    nombre = event.Source.Model.Tag
+    
+    # Abrir el informe y ocultarlo
+    informe = bas.ThisDatabaseDocument.ReportDocuments.getByName(nombre).open()
+    # vistaInforme = informe.CurrentController.Frame.ContainerWindow
+    # vistaInforme.setVisible(False)
+    
     return
 
 
@@ -30,19 +49,9 @@ def abrir_form_gen(event=None):
 # Rutinas a ejecutar cuando se abre un formulario
 def abrir_formulario(event=None):
     ocultar_menus(event)
+    establecer_tamanio(event)
+    limpiar_filtros(event)
     return
-
-
-# # ----------------------------------------------------------------------
-# # Abre un informe. El nombre del informe debe estar en el Tag del
-# # control que lo llama
-# def abrirInformeGenerico(event=None):
-#     nombre = event.Source.Model.Tag
-#     bas = CreateScriptService('Basic')
-#     doc = bas.ThisDatabaseDocument
-#     repo = doc.ReportDocuments.getByName(nombre)
-#     # doc.ReportDocuments.getByName(nombre).open()
-#     return
 
 
 # ----------------------------------------------------------------------
@@ -52,14 +61,6 @@ def abrir_menu_ppal(event=None):
     doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
     doc.OpenFormDocument('MenuPpal')
     return
-
-
-# # ----------------------------------------------------------------------
-# # Actualiza el importe de las asistencias después de añadir un detalle
-# def actualizarImporteAsistencia(event=None):
-#     doc = event.Source.Parent
-#     doc.getByName('Totales').reload()
-#     return
 
 
 # ----------------------------------------------------------------------
@@ -93,20 +94,15 @@ def cargar_config(event=None):
     rs.first()
     global dir_fac_colab
     dir_fac_colab = rs.getString(rs.findColumn('CfValor'))
-
-    # El documento de base de datos
-    TDB = bas.ThisDatabaseDocument
-
     return
 
 
 # ----------------------------------------------------------------------
 # Rutinas a ejecutar cuando se cierra un formulario
 def cerrar_formulario(event=None):
-    mostrar_menus(event)
-    limpiar_filtros(event)
     bas = CreateScriptService('Basic')
     doc = CreateScriptService('Document', bas.ThisDatabaseDocument)
+    mostrar_menus(event)
     # TODO Sustituir MenuPpal por un formulario genérico
     doc.OpenFormDocument('MenuPpal')
     return
@@ -116,7 +112,7 @@ def cerrar_formulario(event=None):
 # Cierra el formulario principal y muestra Base
 def cerrar_menu_ppal(event=None):
     mostrar_menus(event)  # Muestra el menú y la barras nuevamente
-    salir(event)
+    # salir(event)
     return
 
 
@@ -249,24 +245,6 @@ def facturar(event=None):
     return
 
 
-# # ----------------------------------------------------------------------
-# # Establece un filtro de facturas no emitidas en el formulario facturas
-# def filtrarAsistenciasColab(event=None):
-#     boton = event.Source.Model
-#     form = event.Source.Model.Parent
-#     if boton.State:
-#         boton.HelpText = "Mostrar todas las asistencias"
-#         form.ApplyFilter = True
-#         form.reload()
-#         pass
-#     else:
-#         boton.HelpText = "Mostrar solo asistencias no facturadas"
-#         form.ApplyFilter = False
-#         form.reload()
-#         pass
-#     return
-
-
 # ----------------------------------------------------------------------
 # Establece un filtro de facturas no pagadas en el formulario facturas de colaborador
 def filtrar_colab_no_pagadas(event=None):
@@ -305,16 +283,20 @@ def imprimir_fact_col(event=None):
     fact = form.getString(form.findColumn('FcId'))
     imprimir_colaborador(form, fact)
     return
+
+
 # ----------------------------------------------------------------------
 # Imprime en pdf la factura con id fa_id
 def imprimir_factura(form, fa_id):
     bas = CreateScriptService('Basic')
     cargar_config()
+
     # Filtrar para el informe por el Id de factura
     sql = 'UPDATE "Filtros" SET "Valor" = ' + fa_id + ' WHERE "FiId" = 1'
     con = form.ActiveConnection
     stat = con.createStatement()
     stat.executeUpdate(sql)
+
     # Obtener el número de factura y el concepto
     numFactura = form.getString(form.findColumn('FaNumero'))
     concepto = form.getString(form.findColumn('FaConcepto'))
@@ -334,7 +316,7 @@ def imprimir_factura(form, fa_id):
     informe.storeToURL(archivo, args)
     informe.close(True)
     # Limpia el filtro para el próximo uso
-    limpiar_filtros()
+    #limpiar_filtros()
     return
 
 
@@ -357,14 +339,11 @@ def imprimir_colaborador(form, fc_id, doc=None):
     rs.first()
     numFactura = rs.getString(rs.findColumn('FcNumero'))
 
-
     archivo = uno.systemPathToFileUrl(dir_fac_colab + numFactura + '.pdf')
     # Imprimir la factura
     args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
     informe.storeToURL(archivo, args)
     informe.close(False)
-    # Limpia el filtro para el próximo uso
-    limpiar_filtros()
     return
 
 
@@ -400,15 +379,12 @@ def imprimir_proforma(event=None):
     args = (PropertyValue(Name='FilterName', Value='writer_pdf_Export'),)
     informe.storeToURL(archivo, args)
     informe.close(True)
-    # Limpia el filtro para el próximo uso
-    limpiar_filtros()
     return
 
 
 # ----------------------------------------------------------------------
 # Ejecuta las rutinas necesarias para iniciar el programa
 def iniciar_programa(event=None):
-    Application.OpenConnection()
     abrir_menu_ppal(event)
     ocultar_base(event)
     cargar_config(event)
@@ -418,20 +394,20 @@ def iniciar_programa(event=None):
 # ----------------------------------------------------------------------
 # Pone en blanco todos los campos de la tabla Filtros (para cancelar el filtrado)
 def limpiar_filtros(event=None):
-    # Primero vaciar el contenido de todos los campos de la tabla auxiliar filtros
-    rs = Application.CurrentDb().OpenRecordset("Filtros")
-    rs.Edit()
-    for f in rs.Fields():
-        if f.Name != 'FiId':
-            f.Value = ''
-    rs.Update()
+    bas = CreateScriptService('Basic')
+    ds = bas.thisDatabaseDocument.DataSource
+    con = ds.getConnection('', '')
+    stat = con.createStatement()
+    sql = """UPDATE "Filtros"  SET "Valor" = ''"""
+    stat.executeQuery(sql)
+
     if event:
         source = event.Source  # ¿Quién llama a la función?
         # Si es un botón
         if source.ImplementationName == 'com.sun.star.form.OButtonControl':
             # recargar todos lo formularios para que actualicen los datos y se muestren todos
             for form in source.Model.Parent.Parent:  # la colección de formularios
-                form.reload()
+                form.reload()    
     return
 
 
@@ -445,8 +421,10 @@ def mensaje(texto, botones=0, titulo=''):
 # ----------------------------------------------------------------------
 # Muestra Base.
 def mostrar_base(event=None):
-    DoCmd.SelectObject(acConstants.acDatabaseWindow)
-    DoCmd.Maximize()
+    # DoCmd.SelectObject(acConstants.acDatabaseWindow)
+    # DoCmd.Maximize()
+    bas =CreateScriptService("Basic")
+    vent = bas.ThisDatabaseDocument.CurrentController.Frame.ContainerWindow.IsMaximized = True
     return
 
 
@@ -456,15 +434,15 @@ def mostrar_menus(event=None):
     doc = event.Source
     frame = doc.CurrentController.Frame
     frame.LayoutManager.setVisible(True)
-    pass
+    return
 
 
 # ----------------------------------------------------------------------
 # Oculta Base. Se llama desde un formulario
 def ocultar_base(event=None):
-    # DoCmd.SetHiddenAttribute(acConstants.acDatabaseWindow)
-    DoCmd.SelectObject(acConstants.acDatabaseWindow)
-    DoCmd.Minimize()
+    bas =CreateScriptService("Basic")
+    doc = bas.ThisDatabaseDocument
+    doc.CurrentController.Frame.ContainerWindow.IsMinimized = True
     return
 
 
@@ -474,7 +452,7 @@ def ocultar_menus(event=None):
     doc = event.Source
     frame = doc.CurrentController.Frame
     frame.LayoutManager.setVisible(False)
-    establecer_tamanio(event)
+
 
 
 # ----------------------------------------------------------------------
@@ -498,7 +476,7 @@ def salir(event=None):
     bas = CreateScriptService('Basic')
     doc = CreateScriptService("SFDocuments.Document", bas.ThisDatabaseDocument)
     # TODO Comentar temporalmente la siguiente línea si se necesita trabajar en Base
-    # doc.RunCommand("CloseDoc")
+    doc.RunCommand("CloseDoc")
     return
 
 
@@ -512,7 +490,8 @@ def xray(objeto):
 # ----------------------------------------------------------------------
 def main(event=None):
     # from Xlib import display
-    xray('hola')
+    ui= CreateScriptService("UI")
+    xray(ui)
     return
 
 
